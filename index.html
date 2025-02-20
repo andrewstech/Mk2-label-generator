@@ -22,8 +22,8 @@
         <p class="text-gray-600 mb-4">Enter labels (one per line) and click "Generate Labels" to create a PDF.</p>
 
         <textarea id="labelInput" 
-            class="w-full h-32 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="Enter one label per line..."></textarea>
+            class="w-full h-32 border border-gray-300 rounded-lg p-3 text-gray-700 uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="Enter one label per line..." oninput="forceUppercase()"></textarea>
 
         <button onclick="generateLabels()"
             class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
@@ -37,6 +37,11 @@
     </footer>
 
     <script>
+        function forceUppercase() {
+            const textarea = document.getElementById("labelInput");
+            textarea.value = textarea.value.toUpperCase();
+        }
+
         function generateLabels() {
             try {
                 const { jsPDF } = window.jspdf;
@@ -45,9 +50,9 @@
                     return;
                 }
 
-                // Get user input and split it into lines
+                // Get user input and split it into lines (force uppercase)
                 const labelText = document.getElementById("labelInput").value.trim();
-                const labels = labelText.split("\n").map(label => label.trim()).filter(label => label !== "");
+                const labels = labelText.split("\n").map(label => label.trim().toUpperCase()).filter(label => label !== "");
 
                 if (labels.length === 0) {
                     console.error("No labels entered.");
@@ -77,10 +82,17 @@
                     pdf.setDrawColor(0, 0, 0);
                     pdf.rect(margin, startY, labelWidth, labelHeight);
 
+                    // Auto Scale Text Size
+                    let textSize = 40;
+                    const maxTextWidth = labelWidth - 20;
+                    while (pdf.getTextWidth(label) > maxTextWidth && textSize > 10) {
+                        textSize -= 2;
+                    }
+
                     // Text
                     pdf.setTextColor(0, 0, 0);
                     pdf.setFont("helvetica", "bold");
-                    pdf.setFontSize(40);
+                    pdf.setFontSize(textSize);
                     pdf.text(label, margin + 10, startY + 30);
 
                     // Generate Barcode
