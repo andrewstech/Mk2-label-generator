@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M.K 2 Label Generator</title>
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Load JsBarcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">M.K 2 Label Generator</h1>
+        <p class="text-gray-600 mb-4">Enter labels (one per line) and click "Generate Labels" to create a PDF.</p>
+
+        <textarea id="labelInput" 
+            class="w-full h-32 border border-gray-300 rounded-lg p-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="Enter one label per line..."></textarea>
+
+        <button onclick="generateLabels()"
+            class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
+            Generate Labels
+        </button>
+    </div>
+
+    <!-- Copyright Notice -->
+    <footer class="mt-6 text-gray-500 text-sm">
+        © Andrew Beadman 2025
+    </footer>
+
+    <script>
+        function generateLabels() {
+            try {
+                const { jsPDF } = window.jspdf;
+                if (typeof JsBarcode === "undefined") {
+                    console.error("JsBarcode not found! The script may not have loaded properly.");
+                    return;
+                }
+
+                // Get user input and split it into lines
+                const labelText = document.getElementById("labelInput").value.trim();
+                const labels = labelText.split("\n").map(label => label.trim()).filter(label => label !== "");
+
+                if (labels.length === 0) {
+                    console.error("No labels entered.");
+                    return;
+                }
+
+                const pdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
+
+                const labelWidth = 120;
+                const labelHeight = 50;
+                const pageWidth = 210; // A4 width
+                const pageHeight = 297; // A4 height
+                const margin = 10;
+                let startY = margin;
+
+                labels.forEach((label) => {
+                    if (startY + labelHeight > pageHeight - margin) {
+                        pdf.addPage();
+                        startY = margin;
+                    }
+
+                    // Draw Label Border
+                    pdf.setDrawColor(0, 0, 0);
+                    pdf.rect(margin, startY, labelWidth, labelHeight);
+
+                    // Text
+                    pdf.setTextColor(0, 0, 0);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(40);
+                    pdf.text(label, margin + 10, startY + 30);
+
+                    // Generate Barcode
+                    const barcodeCanvas = document.createElement("canvas");
+                    JsBarcode(barcodeCanvas, label, {
+                        format: "CODE128",
+                        displayValue: false,
+                        lineColor: "#000",
+                        width: 2,
+                        height: 30,
+                    });
+
+                    // Convert barcode to image and add to PDF
+                    const barcodeImg = barcodeCanvas.toDataURL("image/png");
+                    pdf.addImage(barcodeImg, "PNG", margin + labelWidth - 50, startY + 10, 40, 30);
+
+                    startY += labelHeight + 5;
+                });
+
+                window.open(pdf.output("bloburl"), "_blank");
+
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+    </script>
+
+</body>
+</html>
