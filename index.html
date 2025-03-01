@@ -18,34 +18,57 @@
   <div class="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full">
     <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">M.K 2 Label Generator</h1>
     <p class="text-gray-600 text-center mb-4">Enter labels below.</p>
+
+    <!-- Container for individual label rows -->
     <div id="labelsContainer"></div>
-    <button onclick="addLabel()" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
+    
+    <!-- Button to add a single label row -->
+    <button onclick="createLabelRow('')" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
       + Add Label
     </button>
+    
+    <!-- Bulk labels section -->
+    <div class="mt-4">
+      <button onclick="toggleBulkInput()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-all">
+        Bulk Add Labels
+      </button>
+      <div id="bulkLabelsDiv" class="mt-2" style="display: none;">
+        <textarea id="bulkInput" class="w-full border border-gray-300 rounded-lg p-2" rows="5" placeholder="Enter one label per line"></textarea>
+        <button onclick="bulkAddLabels()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition-all">
+          Add Bulk Labels
+        </button>
+      </div>
+    </div>
+    
     <div class="flex items-center justify-center mt-4">
       <!-- Yellow Label checkbox is checked by default (for non-A4 modes) -->
       <input type="checkbox" id="yellowLabelCheckbox" class="mr-2 w-5 h-5 text-blue-600" checked>
       <label for="yellowLabelCheckbox" class="text-gray-700 font-medium">Yellow Label</label>
     </div>
+    
     <!-- Standard layout -->
     <button onclick="generateLabels()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
       Generate Labels
     </button>
+    
     <!-- Vertical box layout -->
     <button onclick="generateVerticalLabels()" class="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-all">
-      Generate Vertical Labels
+      Generate Vertical Box Labels
     </button>
+    
     <!-- New A4 layout: each label gets its own full A4 page in landscape (ignores yellow) -->
     <button onclick="generateA4Labels()" class="mt-4 w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition-all">
       Generate A4 Labels
     </button>
   </div>
+  
   <footer class="mt-6 text-gray-500 text-sm text-center">
     © Andrew Beadman 2025
   </footer>
+  
   <script>
-    // Adds a new label row with a text input and an arrow direction dropdown.
-    function addLabel() {
+    // Function to create a label row. If labelText is provided, pre-populate the input.
+    function createLabelRow(labelText) {
       const container = document.getElementById("labelsContainer");
       const div = document.createElement("div");
       div.classList.add("flex", "items-center", "mt-2", "space-x-2");
@@ -53,21 +76,12 @@
       // Label text input.
       const input = document.createElement("input");
       input.type = "text";
-      input.classList.add(
-        "border",
-        "border-gray-300",
-        "rounded-lg",
-        "p-2",
-        "flex-1",
-        "uppercase",
-        "focus:ring-2",
-        "focus:ring-blue-500",
-        "focus:outline-none"
-      );
+      input.classList.add("border", "border-gray-300", "rounded-lg", "p-2", "flex-1", "uppercase", "focus:ring-2", "focus:ring-blue-500", "focus:outline-none");
       input.placeholder = "Enter Label...";
+      input.value = labelText;
       input.oninput = () => { input.value = input.value.toUpperCase(); };
 
-      // Dropdown for arrow direction (used in standard layout).
+      // Dropdown for arrow direction.
       const arrowSelect = document.createElement("select");
       arrowSelect.classList.add("border", "border-gray-300", "rounded-lg", "p-2");
       arrowSelect.innerHTML = `
@@ -81,21 +95,38 @@
       // Button to remove the row.
       const removeBtn = document.createElement("button");
       removeBtn.textContent = "×";
-      removeBtn.classList.add(
-        "bg-red-500",
-        "text-white",
-        "rounded-lg",
-        "p-2",
-        "text-lg",
-        "hover:bg-red-700",
-        "transition-all"
-      );
+      removeBtn.classList.add("bg-red-500", "text-white", "rounded-lg", "p-2", "text-lg", "hover:bg-red-700", "transition-all");
       removeBtn.onclick = () => { container.removeChild(div); };
 
       div.appendChild(input);
       div.appendChild(arrowSelect);
       div.appendChild(removeBtn);
       container.appendChild(div);
+    }
+
+    // Toggle display of the bulk labels input area.
+    function toggleBulkInput() {
+      const bulkDiv = document.getElementById("bulkLabelsDiv");
+      if (bulkDiv.style.display === "none") {
+        bulkDiv.style.display = "block";
+      } else {
+        bulkDiv.style.display = "none";
+      }
+    }
+
+    // Read the text area, split by newline, and add each non-empty line as a new label.
+    function bulkAddLabels() {
+      const bulkInput = document.getElementById("bulkInput").value;
+      const lines = bulkInput.split(/\r?\n/);
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed !== "") {
+          createLabelRow(trimmed);
+        }
+      });
+      // Optionally, clear the bulk input area and hide it.
+      document.getElementById("bulkInput").value = "";
+      toggleBulkInput();
     }
 
     // Standard layout: generates labels sequentially on the page.
