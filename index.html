@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>M.K 2 Label Generator</title>
 
   <!-- Load Tailwind CSS -->
@@ -15,48 +15,59 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
 </head>
 <body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6">
-
   <div class="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full">
     <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">M.K 2 Label Generator</h1>
     <p class="text-gray-600 text-center mb-4">Enter labels below.</p>
-
     <div id="labelsContainer"></div>
-
-    <button onclick="addLabel()"
-      class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
+    <button onclick="addLabel()" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
       + Add Label
     </button>
-
     <div class="flex items-center justify-center mt-4">
-      <input type="checkbox" id="yellowLabelCheckbox" class="mr-2 w-5 h-5 text-blue-600">
+      <!-- Yellow Label checkbox is checked by default (for non-A4 modes) -->
+      <input type="checkbox" id="yellowLabelCheckbox" class="mr-2 w-5 h-5 text-blue-600" checked>
       <label for="yellowLabelCheckbox" class="text-gray-700 font-medium">Yellow Label</label>
     </div>
-
-    <button onclick="generateLabels()"
-      class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
+    <!-- Standard layout -->
+    <button onclick="generateLabels()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
       Generate Labels
     </button>
+    <!-- Vertical box layout -->
+    <button onclick="generateVerticalLabels()" class="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-all">
+      Generate Vertical Labels
+    </button>
+    <!-- New A4 layout: each label gets its own full A4 page in landscape (ignores yellow) -->
+    <button onclick="generateA4Labels()" class="mt-4 w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition-all">
+      Generate A4 Labels
+    </button>
   </div>
-
   <footer class="mt-6 text-gray-500 text-sm text-center">
     © Andrew Beadman 2025
   </footer>
-
   <script>
-    // Adds a new label input field with a dropdown for arrow direction.
+    // Adds a new label row with a text input and an arrow direction dropdown.
     function addLabel() {
       const container = document.getElementById("labelsContainer");
-
       const div = document.createElement("div");
       div.classList.add("flex", "items-center", "mt-2", "space-x-2");
 
+      // Label text input.
       const input = document.createElement("input");
       input.type = "text";
-      input.classList.add("border", "border-gray-300", "rounded-lg", "p-2", "flex-1", "uppercase", "focus:ring-2", "focus:ring-blue-500", "focus:outline-none");
+      input.classList.add(
+        "border",
+        "border-gray-300",
+        "rounded-lg",
+        "p-2",
+        "flex-1",
+        "uppercase",
+        "focus:ring-2",
+        "focus:ring-blue-500",
+        "focus:outline-none"
+      );
       input.placeholder = "Enter Label...";
       input.oninput = () => { input.value = input.value.toUpperCase(); };
 
-      // Dropdown for selecting the arrow direction.
+      // Dropdown for arrow direction (used in standard layout).
       const arrowSelect = document.createElement("select");
       arrowSelect.classList.add("border", "border-gray-300", "rounded-lg", "p-2");
       arrowSelect.innerHTML = `
@@ -67,9 +78,18 @@
         <option value="down">Down</option>
       `;
 
+      // Button to remove the row.
       const removeBtn = document.createElement("button");
       removeBtn.textContent = "×";
-      removeBtn.classList.add("bg-red-500", "text-white", "rounded-lg", "p-2", "text-lg", "hover:bg-red-700", "transition-all");
+      removeBtn.classList.add(
+        "bg-red-500",
+        "text-white",
+        "rounded-lg",
+        "p-2",
+        "text-lg",
+        "hover:bg-red-700",
+        "transition-all"
+      );
       removeBtn.onclick = () => { container.removeChild(div); };
 
       div.appendChild(input);
@@ -78,48 +98,7 @@
       container.appendChild(div);
     }
 
-    // Creates an arrow on a canvas, rotating it according to the chosen direction.
-    function createArrowCanvas(width, height, direction) {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#000";  // Arrow color
-
-      // Save the context state so we can restore after rotating.
-      ctx.save();
-
-      // Determine rotation angle (in radians) based on selected direction.
-      let angle = 0;
-      switch (direction) {
-        case 'right': angle = 0; break;
-        case 'left': angle = Math.PI; break;
-        case 'up': angle = -Math.PI / 2; break;
-        case 'down': angle = Math.PI / 2; break;
-        default: angle = 0;
-      }
-
-      // Rotate the canvas context around its center.
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate(angle);
-      ctx.translate(-width / 2, -height / 2);
-
-      // Draw a simple right-pointing arrow.
-      ctx.beginPath();
-      ctx.moveTo(0, height / 2 - 5);
-      ctx.lineTo(width - 10, height / 2 - 5);
-      ctx.lineTo(width - 10, 0);
-      ctx.lineTo(width, height / 2);
-      ctx.lineTo(width - 10, height);
-      ctx.lineTo(width - 10, height / 2 + 5);
-      ctx.lineTo(0, height / 2 + 5);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
-      return canvas;
-    }
-
+    // Standard layout: generates labels sequentially on the page.
     function generateLabels() {
       try {
         const { jsPDF } = window.jspdf;
@@ -127,8 +106,6 @@
           console.error("JsBarcode not found!");
           return;
         }
-
-        // Retrieve each label along with its chosen arrow direction.
         const labelContainers = document.querySelectorAll("#labelsContainer div");
         const labelsData = Array.from(labelContainers).map(div => {
           const text = div.querySelector("input").value.trim().toUpperCase();
@@ -136,12 +113,10 @@
           const arrowDirection = arrowSelect ? arrowSelect.value : "none";
           return { text, arrowDirection };
         }).filter(data => data.text !== "");
-
         if (labelsData.length === 0) {
           console.error("No labels entered.");
           return;
         }
-
         const isYellow = document.getElementById("yellowLabelCheckbox").checked;
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
         const labelWidth = 140;
@@ -150,33 +125,27 @@
         let startY = margin;
         const pageHeight = 297;
         const barcodeWidth = 40;
-
         labelsData.forEach(({ text, arrowDirection }) => {
           if (startY + labelHeight > pageHeight - margin) {
             pdf.addPage();
             startY = margin;
           }
-
           if (isYellow) {
             pdf.setFillColor(255, 255, 0);
             pdf.rect(margin, startY, labelWidth, labelHeight, "F");
           }
-
           pdf.setDrawColor(0, 0, 0);
           pdf.rect(margin, startY, labelWidth, labelHeight, "S");
-
           let textSize = 40;
           const maxTextWidth = labelWidth - 60;
           while (pdf.getTextWidth(text) > maxTextWidth && textSize > 10) {
             textSize -= 2;
           }
-
           pdf.setTextColor(0, 0, 0);
           pdf.setFont("helvetica", "bold");
           pdf.setFontSize(textSize);
-          pdf.text(text, margin + 10, startY + 30);
-
-          // Determine barcode x-position based on whether an arrow is selected.
+          const textY = startY + labelHeight / 2 + textSize / 4;
+          pdf.text(text, margin + 10, textY);
           let barcodeXFixed;
           if (arrowDirection !== "none") {
             var arrowWidth = 20;
@@ -185,8 +154,6 @@
           } else {
             barcodeXFixed = margin + labelWidth - barcodeWidth - 25;
           }
-
-          // Generate the barcode.
           const barcodeCanvas = document.createElement("canvas");
           JsBarcode(barcodeCanvas, text, {
             format: "CODE128",
@@ -196,26 +163,208 @@
             width: 2,
             height: 30,
           });
-          pdf.addImage(barcodeCanvas.toDataURL("image/png"), "PNG", barcodeXFixed, startY + 10, barcodeWidth, 30);
-
-          // If an arrow is selected (other than "No Arrow"), add it.
+          pdf.addImage(
+            barcodeCanvas.toDataURL("image/png"),
+            "PNG",
+            barcodeXFixed,
+            startY + (labelHeight - 30) / 2,
+            barcodeWidth,
+            30
+          );
           if (arrowDirection !== "none") {
             const arrowWidth = 20;
             const arrowHeight = 30;
             const arrowX = margin + labelWidth - arrowWidth - 5;
             const arrowY = startY + (labelHeight - arrowHeight) / 2;
             const arrowCanvas = createArrowCanvas(arrowWidth, arrowHeight, arrowDirection);
-            pdf.addImage(arrowCanvas.toDataURL("image/png"), "PNG", arrowX, arrowY, arrowWidth, arrowHeight);
+            pdf.addImage(
+              arrowCanvas.toDataURL("image/png"),
+              "PNG",
+              arrowX,
+              arrowY,
+              arrowWidth,
+              arrowHeight
+            );
           }
-
           startY += labelHeight + 5;
         });
-
         window.open(pdf.output("bloburl"), "_blank");
-
       } catch (error) {
         console.error("Error:", error);
       }
+    }
+
+    // Vertical box layout: generates labels in a tightly packed vertical column.
+    function generateVerticalLabels() {
+      try {
+        const { jsPDF } = window.jspdf;
+        if (typeof JsBarcode === "undefined") {
+          console.error("JsBarcode not found!");
+          return;
+        }
+        const labelContainers = document.querySelectorAll("#labelsContainer div");
+        const labelsData = Array.from(labelContainers)
+          .map(div => div.querySelector("input").value.trim().toUpperCase())
+          .filter(text => text !== "");
+        if (labelsData.length === 0) {
+          console.error("No labels entered.");
+          return;
+        }
+        const isYellow = document.getElementById("yellowLabelCheckbox").checked;
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const margin = 10;
+        const labelWidth = 60;
+        const labelHeight = 60;
+        let y = margin;
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const textFontSize = 16;
+        labelsData.forEach(text => {
+          if (y + labelHeight > pageHeight - margin) {
+            pdf.addPage();
+            y = margin;
+          }
+          if (isYellow) {
+            pdf.setFillColor(255, 255, 0);
+            pdf.rect(margin, y, labelWidth, labelHeight, 'F');
+          }
+          pdf.setDrawColor(0, 0, 0);
+          pdf.rect(margin, y, labelWidth, labelHeight, 'S');
+          const barcodeMarginX = 5;
+          const barcodeMarginY = 5;
+          const barcodeWidth = labelWidth - 2 * barcodeMarginX;
+          const barcodeHeight = 25;
+          const barcodeCanvas = document.createElement("canvas");
+          JsBarcode(barcodeCanvas, text, {
+            format: "CODE128",
+            displayValue: false,
+            lineColor: "#000",
+            background: isYellow ? "#FFFF00" : "#FFFFFF",
+            width: 2,
+            height: barcodeHeight
+          });
+          pdf.addImage(
+            barcodeCanvas.toDataURL("image/png"),
+            "PNG",
+            margin + barcodeMarginX,
+            y + barcodeMarginY,
+            barcodeWidth,
+            barcodeHeight
+          );
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(textFontSize);
+          const textY = y + barcodeMarginY + barcodeHeight + 10;
+          pdf.text(text, margin + labelWidth / 2, textY, { align: "center" });
+          y += labelHeight;
+        });
+        window.open(pdf.output("bloburl"), "_blank");
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+
+    // A4 layout: each label is rendered on its own full A4 page in landscape.
+    // The barcode is reduced in size and centered both horizontally and vertically,
+    // and the yellow background is ignored.
+    function generateA4Labels() {
+      try {
+        const { jsPDF } = window.jspdf;
+        if (typeof JsBarcode === "undefined") {
+          console.error("JsBarcode not found!");
+          return;
+        }
+        const labelContainers = document.querySelectorAll("#labelsContainer div");
+        const labelsData = Array.from(labelContainers)
+          .map(div => div.querySelector("input").value.trim().toUpperCase())
+          .filter(text => text !== "");
+        if (labelsData.length === 0) {
+          console.error("No labels entered.");
+          return;
+        }
+        // Create PDF in landscape orientation.
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 10;
+        // Define barcode and text parameters.
+        const barcodeWidth = 100;
+        const barcodeHeight = 25;
+        const gap = 20; // Gap between barcode and text.
+        const textFontSize = 32;
+        // Total content height.
+        const contentHeight = barcodeHeight + gap + textFontSize;
+        // Compute vertical start to center content within available space.
+        const availableHeight = pageHeight - 2 * margin;
+        const contentStartY = margin + (availableHeight - contentHeight) / 2;
+        labelsData.forEach((text, index) => {
+          if (index > 0) {
+            pdf.addPage();
+          }
+          // Draw border for the label box.
+          pdf.setDrawColor(0, 0, 0);
+          pdf.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin, "S");
+          // Center barcode horizontally.
+          const barcodeX = (pageWidth - barcodeWidth) / 2;
+          const barcodeY = contentStartY;
+          const barcodeCanvas = document.createElement("canvas");
+          JsBarcode(barcodeCanvas, text, {
+            format: "CODE128",
+            displayValue: false,
+            lineColor: "#000",
+            background: "#FFFFFF",
+            width: 2,
+            height: barcodeHeight
+          });
+          pdf.addImage(
+            barcodeCanvas.toDataURL("image/png"),
+            "PNG",
+            barcodeX,
+            barcodeY,
+            barcodeWidth,
+            barcodeHeight
+          );
+          // Place text below the barcode, centered.
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(textFontSize);
+          const textY = barcodeY + barcodeHeight + gap;
+          pdf.text(text, pageWidth / 2, textY, { align: "center" });
+        });
+        window.open(pdf.output("bloburl"), "_blank");
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+
+    // Draws an arrow on a canvas and rotates it based on the specified direction.
+    function createArrowCanvas(width, height, direction) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#000";
+      ctx.save();
+      let angle = 0;
+      switch (direction) {
+        case 'right': angle = 0; break;
+        case 'left': angle = Math.PI; break;
+        case 'up': angle = -Math.PI / 2; break;
+        case 'down': angle = Math.PI / 2; break;
+        default: angle = 0;
+      }
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate(angle);
+      ctx.translate(-width / 2, -height / 2);
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2 - 3);
+      ctx.lineTo(width - 10, height / 2 - 3);
+      ctx.lineTo(width - 10, 0);
+      ctx.lineTo(width, height / 2);
+      ctx.lineTo(width - 10, height);
+      ctx.lineTo(width - 10, height / 2 + 3);
+      ctx.lineTo(0, height / 2 + 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      return canvas;
     }
   </script>
 </body>
