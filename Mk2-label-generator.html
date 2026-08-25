@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M.K 2 Label Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6">
+  <div class="bg-white shadow-lg rounded-lg p-8 max-w-lg w-full">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">M.K 2 Label Generator</h1>
+    <p class="text-gray-600 text-center mb-4">Enter labels below.</p>
+
+    <div id="labelsContainer" class="space-y-2 mb-4"></div>
+
+    <button onclick="createLabelRow('')" class="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
+      + Add Label
+    </button>
+
+    <div class="mt-4">
+      <button onclick="toggleBulkInput()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-all">
+        Bulk Add Labels
+      </button>
+      <div id="bulkLabelsDiv" class="mt-2" style="display: none;">
+        <textarea id="bulkInput" class="w-full border border-gray-300 rounded-lg p-2" rows="5" placeholder="Enter one label per line"></textarea>
+        <button onclick="bulkAddLabels()" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition-all">
+          Add Bulk Labels
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="text-gray-700 font-medium block mb-1">Store Name</label>
+      <input id="storeNameInput" type="text" placeholder="e.g. COALVILLE"
+        class="w-full border border-gray-300 rounded-lg p-2 uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        oninput="this.value = this.value.toUpperCase();" />
+    </div>
+
+    <div class="flex items-center justify-center mt-4">
+      <input type="checkbox" id="yellowLabelCheckbox" class="mr-2 w-5 h-5 text-blue-600" checked>
+      <label for="yellowLabelCheckbox" class="text-gray-700 font-medium">Yellow Label</label>
+    </div>
+
+    <button onclick="generateLabels()" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
+      Generate Labels
+    </button>
+
+    <div class="flex space-x-2 mt-4">
+      <button onclick="generateVerticalLabels()" class="w-1/2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-all">
+        Vertical Labels
+      </button>
+      <button onclick="generateA4Labels()" class="w-1/2 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition-all">
+        A4 Labels
+      </button>
+    </div>
+  </div>
+
+  <footer class="mt-6 text-gray-500 text-sm text-center">
+    © Andrew Beadman 2025 - 2026
+  </footer>
+
+  <script>
+    let rowIdCounter = 0;
+    const nextId = () => `label-${++rowIdCounter}`;
+
+    function createLabelRow(labelText) {
+      const container = document.getElementById("labelsContainer");
+      const div = document.createElement("div");
+      div.classList.add("flex", "items-center", "space-x-2");
+      div.dataset.rowId = nextId();
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.classList.add("border", "border-gray-300", "rounded-lg", "p-2", "flex-1", "uppercase", "focus:ring-2", "focus:ring-blue-500", "focus:outline-none");
+      input.placeholder = "Enter Label...";
+      input.value = labelText;
+      input.oninput = () => { input.value = input.value.toUpperCase(); };
+
+      const arrowSelect = document.createElement("select");
+      arrowSelect.classList.add("border", "border-gray-300", "rounded-lg", "p-2", "bg-white");
+      [
+        { value: "none", label: "No Arrow" },
+        { value: "up", label: "Up" },
+        { value: "down", label: "Down" },
+        { value: "left", label: "Left" },
+        { value: "right", label: "Right" },
+      ].forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.value;
+        opt.textContent = o.label;
+        arrowSelect.appendChild(opt);
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.textContent = "×";
+      removeBtn.classList.add("bg-red-500", "text-white", "rounded-lg", "p-2", "text-lg", "hover:bg-red-700", "transition-all", "w-10", "h-10", "flex", "items-center", "justify-center");
+      removeBtn.onclick = () => { container.removeChild(div); };
+
+      div.appendChild(input);
+      div.appendChild(arrowSelect);
+      div.appendChild(removeBtn);
+      container.appendChild(div);
+    }
+
+    function toggleBulkInput() {
+      const bulkDiv = document.getElementById("bulkLabelsDiv");
+      bulkDiv.style.display = bulkDiv.style.display === "none" ? "block" : "none";
+    }
+
+    function bulkAddLabels() {
+      const bulkInput = document.getElementById("bulkInput").value;
+      const lines = bulkInput.split(/\r?\n/);
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed !== "") createLabelRow(trimmed);
+      });
+      document.getElementById("bulkInput").value = "";
+      toggleBulkInput();
+    }
+
+    function collectLabels() {
+      const rows = document.querySelectorAll("#labelsContainer > div");
+      return Array.from(rows).map(div => {
+        const text = div.querySelector("input").value.trim().toUpperCase();
+        const arrowDirection = div.querySelector("select").value;
+        return { text, arrowDirection };
+      }).filter(d => d.text !== "");
+    }
+
+    function createArrowCanvas(width, height, direction) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#000";
+
+      const px = width * 0.12;
+      const py = height * 0.08;
+      const cx = width / 2;
+      const cy = height / 2;
+
+      ctx.beginPath();
+
+      if (direction === "up") {
+        const headY = height * 0.38;
+        const shaftHalf = width * 0.17;
+        ctx.moveTo(cx, py);
+        ctx.lineTo(width - px, headY);
+        ctx.lineTo(cx + shaftHalf, headY);
+        ctx.lineTo(cx + shaftHalf, height - py);
+        ctx.lineTo(cx - shaftHalf, height - py);
+        ctx.lineTo(cx - shaftHalf, headY);
+        ctx.lineTo(px, headY);
+      } else if (direction === "down") {
+        const headY = height * 0.62;
+        const shaftHalf = width * 0.17;
+        ctx.moveTo(cx, height - py);
+        ctx.lineTo(width - px, headY);
+        ctx.lineTo(cx + shaftHalf, headY);
+        ctx.lineTo(cx + shaftHalf, py);
+        ctx.lineTo(cx - shaftHalf, py);
+        ctx.lineTo(cx - shaftHalf, headY);
+        ctx.lineTo(px, headY);
+      } else if (direction === "left") {
+        const headX = width * 0.42;
+        const shaftHalf = height * 0.12;
+        ctx.moveTo(px, cy);
+        ctx.lineTo(headX, py);
+        ctx.lineTo(headX, cy - shaftHalf);
+        ctx.lineTo(width - px, cy - shaftHalf);
+        ctx.lineTo(width - px, cy + shaftHalf);
+        ctx.lineTo(headX, cy + shaftHalf);
+        ctx.lineTo(headX, height - py);
+      } else {
+        const headX = width * 0.58;
+        const shaftHalf = height * 0.12;
+        ctx.moveTo(width - px, cy);
+        ctx.lineTo(headX, py);
+        ctx.lineTo(headX, cy - shaftHalf);
+        ctx.lineTo(px, cy - shaftHalf);
+        ctx.lineTo(px, cy + shaftHalf);
+        ctx.lineTo(headX, cy + shaftHalf);
+        ctx.lineTo(headX, height - py);
+      }
+
+      ctx.closePath();
+      ctx.fill();
+      return canvas;
+    }
+
+    function makeBarcodeCanvas(text, bg, height) {
+      const canvas = document.createElement("canvas");
+      JsBarcode(canvas, text, {
+        format: "CODE128",
+        displayValue: false,
+        lineColor: "#000",
+        background: bg,
+        width: 2,
+        height: height,
+      });
+      return canvas;
+    }
+
+    function drawCutMarks(pdf, x, y, w, h) {
+      const markLength = 4;
+      const markGap = 1.5;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.2);
+
+      pdf.line(x - markGap - markLength, y, x - markGap, y);
+      pdf.line(x, y - markGap - markLength, x, y - markGap);
+
+      pdf.line(x + w + markGap, y, x + w + markGap + markLength, y);
+      pdf.line(x + w, y - markGap - markLength, x + w, y - markGap);
+
+      pdf.line(x - markGap - markLength, y + h, x - markGap, y + h);
+      pdf.line(x, y + h + markGap, x, y + h + markGap + markLength);
+
+      pdf.line(x + w + markGap, y + h, x + w + markGap + markLength, y + h);
+      pdf.line(x + w, y + h + markGap, x + w, y + h + markGap + markLength);
+    }
+
+    function drawPageHeaderFooter(pdf) {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.setTextColor(60, 60, 60);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("MK2 Label Generator", pageWidth / 2, 8, { align: "center" });
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text("© Andrew Beadman", pageWidth / 2, pageHeight - 6, { align: "center" });
+    }
+
+    function generateLabels() {
+      const labelsData = collectLabels();
+      if (labelsData.length === 0) return;
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const pageMarginX = 20;
+      const pageMarginY = 20;
+      const labelWidth = pageWidth - pageMarginX * 2;
+      const labelHeight = 36;
+      const labelX = pageMarginX;
+      const labelGap = 7;
+      const outerCorner = 2.4;
+      const innerInset = 2;
+
+      const arrowBoxWidth = 10;
+      const arrowBoxHeight = 27;
+      const arrowRightInset = 3;
+      const barcodeWidth = 28;
+      const barcodeHeight = 23;
+      const barcodeArrowGap = 3.5;
+      const storeName = document.getElementById("storeNameInput").value;
+      const yellowLabel = document.getElementById("yellowLabelCheckbox").checked;
+      const markerWidth = storeName.trim() ? 16 : 0;
+
+      const arrowBoxLeftRel = labelWidth - arrowRightInset - arrowBoxWidth;
+      const barcodeLeftRel = arrowBoxLeftRel - barcodeArrowGap - barcodeWidth;
+      const textRegionStartRel = innerInset + markerWidth + (markerWidth ? 1 : 2.5);
+      const textRegionEndRel = barcodeLeftRel - 2.5;
+      const textCenterRel = (textRegionStartRel + textRegionEndRel) / 2;
+
+      const bg = yellowLabel ? "#FFE800" : "#FFFFFF";
+      let startY = pageMarginY;
+
+      drawPageHeaderFooter(pdf);
+
+      labelsData.forEach(({ text, arrowDirection }) => {
+        if (startY + labelHeight > pageHeight - pageMarginY) {
+          pdf.addPage();
+          drawPageHeaderFooter(pdf);
+          startY = pageMarginY;
+        }
+
+        if (yellowLabel) {
+          pdf.setFillColor(255, 232, 0);
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        pdf.roundedRect(labelX, startY, labelWidth, labelHeight, outerCorner, outerCorner, "F");
+
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.25);
+        pdf.roundedRect(labelX, startY, labelWidth, labelHeight, outerCorner, outerCorner, "S");
+
+        pdf.setLineWidth(0.22);
+        pdf.roundedRect(labelX + innerInset, startY + innerInset, labelWidth - innerInset * 2, labelHeight - innerInset * 2, 0.7, 0.7, "S");
+
+        if (markerWidth > 0) {
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(7);
+          pdf.text(storeName.trim().toUpperCase(), labelX + 13, startY + labelHeight / 2, { angle: 90, align: "center", baseline: "middle" });
+        }
+
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont("helvetica", "bold");
+        let textSize = 78;
+        pdf.setFontSize(textSize);
+        const maxTextWidth = textRegionEndRel - textRegionStartRel;
+        while (pdf.getTextWidth(text) > maxTextWidth && textSize > 30) {
+          textSize -= 1;
+          pdf.setFontSize(textSize);
+        }
+        pdf.text(text, labelX + textCenterRel, startY + labelHeight / 2 + 0.4, { align: "center", baseline: "middle" });
+
+        const barcodeCanvas = makeBarcodeCanvas(text, bg, 68);
+        pdf.addImage(barcodeCanvas.toDataURL("image/png"), "PNG", labelX + barcodeLeftRel, startY + (labelHeight - barcodeHeight) / 2, barcodeWidth, barcodeHeight);
+
+        if (arrowDirection !== "none") {
+          const boxX = labelX + arrowBoxLeftRel;
+          const boxY = startY + (labelHeight - arrowBoxHeight) / 2;
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(0.28);
+          pdf.rect(boxX, boxY, arrowBoxWidth, arrowBoxHeight, "S");
+          const arrowCanvas = createArrowCanvas(180, 480, arrowDirection);
+          pdf.addImage(arrowCanvas.toDataURL("image/png"), "PNG", boxX + 1.3, boxY + 1.6, arrowBoxWidth - 2.6, arrowBoxHeight - 3.2);
+        }
+
+        drawCutMarks(pdf, labelX, startY, labelWidth, labelHeight);
+        startY += labelHeight + labelGap;
+      });
+
+      window.open(pdf.output("bloburl"), "_blank");
+    }
+
+    function generateVerticalLabels() {
+      const labelsData = collectLabels().map(d => d.text);
+      if (labelsData.length === 0) return;
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const margin = 10;
+      const labelWidth = 60;
+      const labelHeight = 60;
+      let y = margin;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const textFontSize = 16;
+      const yellowLabel = document.getElementById("yellowLabelCheckbox").checked;
+      const bg = yellowLabel ? "#FFF200" : "#FFFFFF";
+
+      drawPageHeaderFooter(pdf);
+
+      labelsData.forEach(text => {
+        if (y + labelHeight > pageHeight - margin) {
+          pdf.addPage();
+          drawPageHeaderFooter(pdf);
+          y = margin;
+        }
+        if (yellowLabel) {
+          pdf.setFillColor(255, 242, 0);
+          pdf.rect(margin, y, labelWidth, labelHeight, "F");
+        }
+        pdf.setDrawColor(0, 0, 0);
+        pdf.rect(margin, y, labelWidth, labelHeight, "S");
+
+        const barcodeMarginX = 5;
+        const barcodeMarginY = 5;
+        const barcodeWidth = labelWidth - 2 * barcodeMarginX;
+        const barcodeHeight = 25;
+        const barcodeCanvas = makeBarcodeCanvas(text, bg, barcodeHeight);
+        pdf.addImage(barcodeCanvas.toDataURL("image/png"), "PNG", margin + barcodeMarginX, y + barcodeMarginY, barcodeWidth, barcodeHeight);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(textFontSize);
+        const textY = y + barcodeMarginY + barcodeHeight + 10;
+        pdf.text(text, margin + labelWidth / 2, textY, { align: "center" });
+        y += labelHeight;
+      });
+      window.open(pdf.output("bloburl"), "_blank");
+    }
+
+    function generateA4Labels() {
+      const labelsData = collectLabels().map(d => d.text);
+      if (labelsData.length === 0) return;
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const marginX = 20;
+      const marginY = 20;
+      const signX = marginX;
+      const signY = marginY;
+      const signWidth = pageWidth - marginX * 2;
+      const signHeight = pageHeight - marginY * 2;
+      const innerInset = 3;
+      const storeName = document.getElementById("storeNameInput").value;
+
+      labelsData.forEach((text, index) => {
+        if (index > 0) pdf.addPage();
+        drawPageHeaderFooter(pdf);
+
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(signX, signY, signWidth, signHeight, 3, 3, "F");
+
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.45);
+        pdf.roundedRect(signX, signY, signWidth, signHeight, 3, 3, "S");
+        pdf.setLineWidth(0.3);
+        pdf.roundedRect(signX + innerInset, signY + innerInset, signWidth - innerInset * 2, signHeight - innerInset * 2, 1, 1, "S");
+
+        if (storeName.trim()) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(14);
+          pdf.text(storeName.trim().toUpperCase(), signX + 10, signY + 14);
+        }
+
+        const contentLeft = signX + 12;
+        const contentRight = signX + signWidth - 12;
+        const contentWidth = contentRight - contentLeft;
+
+        pdf.setFont("helvetica", "bold");
+        let textSize = 106;
+        pdf.setFontSize(textSize);
+        while (pdf.getTextWidth(text) > contentWidth && textSize > 48) {
+          textSize -= 2;
+          pdf.setFontSize(textSize);
+        }
+        pdf.text(text, contentLeft + contentWidth / 2, signY + signHeight * 0.47, { align: "center", baseline: "middle" });
+
+        const barcodeWidth = Math.min(60, contentWidth * 0.275);
+        const barcodeHeight = 15;
+        const barcodeX = contentLeft + (contentWidth - barcodeWidth) / 2;
+        const barcodeY = signY + signHeight - 48;
+        const barcodeCanvas = makeBarcodeCanvas(text, "#FFFFFF", 85);
+        pdf.addImage(barcodeCanvas.toDataURL("image/png"), "PNG", barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+      });
+
+      window.open(pdf.output("bloburl"), "_blank");
+    }
+  </script>
+</body>
+</html>
